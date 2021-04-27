@@ -17,6 +17,9 @@ import io.particle.android.sdk.cloud.ParticleCloudException;
 import io.particle.android.sdk.cloud.ParticleCloudSDK;
 //import io.particle.android.sdk.cloud.exceptions.ParticleCloudException;
 import io.particle.android.sdk.cloud.ParticleDevice;
+import io.particle.android.sdk.cloud.ParticleEvent;
+import io.particle.android.sdk.cloud.ParticleEventHandler;
+import io.particle.android.sdk.cloud.ParticleEventVisibility;
 import io.particle.android.sdk.utils.Async;
 import io.particle.android.sdk.utils.Toaster;
 
@@ -72,10 +75,30 @@ public class MainActivity extends AppCompatActivity {
             }
         }.execute();
 
+   
 
         armBTN.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
+                new AsyncTask<Void, Void, String>() {
+                    protected String doInBackground(Void... params) {
+                        try {
+                            ParticleCloudSDK.getCloud().publishEvent("Arm_Alarm", "true", ParticleEventVisibility.PRIVATE, 60);
+                            return "Door Alarm Armed";
+                        }
+                        catch(ParticleCloudException e) {
+                            Log.e(TAG, "Error Arming Alarm: " + e.toString());
+                            return "Error Arming Alarm!";
+                        }
+                    }
+
+                    protected void onPostExecute(String msg) {
+                        // Show Toast containing message from doInBackground
+                        Toaster.s(MainActivity.this, msg);
+                    }
+                }.execute();
+
                 armBTN.setVisibility(View.INVISIBLE);
                 disarmBTN.setVisibility(View.VISIBLE);
                 statusTxt.setText("ARMED");
