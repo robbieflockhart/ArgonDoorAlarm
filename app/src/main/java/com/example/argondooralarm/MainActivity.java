@@ -3,6 +3,7 @@ package com.example.argondooralarm;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.graphics.Color;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -12,18 +13,23 @@ import android.widget.TextView;
 import java.io.IOException;
 
 import io.particle.android.sdk.cloud.ParticleCloud;
+import io.particle.android.sdk.cloud.ParticleCloudException;
 import io.particle.android.sdk.cloud.ParticleCloudSDK;
-import io.particle.android.sdk.cloud.exceptions.ParticleCloudException;
+//import io.particle.android.sdk.cloud.exceptions.ParticleCloudException;
+import io.particle.android.sdk.cloud.ParticleDevice;
 import io.particle.android.sdk.utils.Async;
 import io.particle.android.sdk.utils.Toaster;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = MainActivity.class.getName();
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        //ParticleCloudSDK.init(this);
         setContentView(R.layout.activity_main);
+
+        ParticleCloudSDK.init(this);
 
         Button armBTN = (Button)findViewById(R.id.armBTN);
         Button disarmBTN = (Button)findViewById(R.id.disarmBTN);
@@ -45,6 +51,28 @@ public class MainActivity extends AppCompatActivity {
             statusTxt.setTextColor(Color.parseColor("#4CAF50"));
         }
 
+        new AsyncTask<Void, Void, String>() {
+            protected String doInBackground(Void... params) {
+                //  LOG IN TO PARTICLE
+                try {
+                    // Log in to Particle Cloud using username and password
+                    ParticleCloudSDK.getCloud().logIn("robb20@hotmail.co.uk", "sykcuk-megfy0-hErqys");
+                    ParticleDevice myDevice = ParticleCloudSDK.getCloud().getDevice("e00fce684e8083453f49b051");
+                    return "Logged in!";
+                }
+                catch(ParticleCloudException e) {
+                    Log.e(TAG, "Error logging in: " + e.toString());
+                    return "Error logging in!";
+                }
+            }
+
+            protected void onPostExecute(String msg) {
+                // Show Toast containing message from doInBackground
+                Toaster.s(MainActivity.this, msg);
+            }
+        }.execute();
+
+
         armBTN.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -64,23 +92,6 @@ public class MainActivity extends AppCompatActivity {
                 statusTxt.setTextColor(Color.parseColor("#F44336"));
             }
         });
-        /*Async.executeAsync(ParticleCloudSDK.getCloud(), new Async.ApiWork<ParticleCloud, Integer>() {
-
-            public Integer callApi(ParticleCloud particleCloud) throws ParticleCloudException, IOException {
-                particleCloud.logIn("ido@particle.io", "myl33tp4ssw0rd");
-                return 1;
-            }
-
-            @Override
-            public void onSuccess(Integer value) {
-                Toaster.s(MainActivity.this, "Room temp is " + value + " degrees.");
-            }
-
-            @Override
-            public void onFailure(ParticleCloudException e) {
-                Log.e("some tag", "Something went wrong making an SDK call: ", e);
-                Toaster.l(MainActivity.this, "Uh oh, something went wrong.");
-            }
-        });*/
     }
+
 }
