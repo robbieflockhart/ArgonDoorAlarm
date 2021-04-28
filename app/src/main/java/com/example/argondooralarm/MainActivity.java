@@ -25,7 +25,9 @@ import io.particle.android.sdk.utils.Toaster;
 
 public class MainActivity extends AppCompatActivity {
 
+    boolean alarmStatus = true;
     private static final String TAG = MainActivity.class.getName();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,7 +39,61 @@ public class MainActivity extends AppCompatActivity {
         Button armBTN = (Button)findViewById(R.id.armBTN);
         Button disarmBTN = (Button)findViewById(R.id.disarmBTN);
         TextView statusTxt = (TextView)findViewById(R.id.statusTxt);
-        boolean alarmStatus = true;
+
+        alarmStatus(alarmStatus);
+
+        particleLogin();
+
+
+        /*new AsyncTask<Void, Void, String>() {
+            protected String doInBackground(Void... params) {
+                try {
+                    // Subscribe to an event
+                    long subscriptionId = ParticleCloudSDK.getCloud().subscribeToAllEvents(
+                            null,  // Subscribe to events containing "example"
+                            new ParticleEventHandler() {
+                                // Trigger this function when the event is received
+                                public void onEvent(String eventName, ParticleEvent event) {
+                                    Toaster.s(MainActivity.this,
+                                            "Example event happened!");
+                                    /*if (eventName.equals("Arm_Alarm")){
+                                        alarmStatus = true;
+                                        alarmStatus(true);
+                                    }
+                                    //if (eventName.equals("Disarm_Alarm")){
+                                        alarmStatus = false;
+                                        alarmStatus(false);
+                                        System.out.println("Event xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+                                   // }
+                                }
+
+                                public void onEventError(Exception e) {
+                                    Log.e(TAG, "Event error: ", e);
+                                }
+                            });
+                    return "Subscribed!";
+                }
+                catch(IOException e) {
+                    // We end up here if there was an error subscribing
+                    Log.e(TAG, e.toString());
+                    return "Error subscribing!";
+                }
+            }
+
+            // This code is run after the doInBackground code finishes
+            protected void onPostExecute(String msg) {
+                Toaster.s(MainActivity.this, msg);
+            }
+        }.execute();*/
+
+        armClick();
+        disarmClick();
+    }
+
+    public void alarmStatus(boolean alarmStatus){
+        Button armBTN = (Button)findViewById(R.id.armBTN);
+        Button disarmBTN = (Button)findViewById(R.id.disarmBTN);
+        TextView statusTxt = (TextView)findViewById(R.id.statusTxt);
 
         if (alarmStatus == false)
         {
@@ -53,7 +109,9 @@ public class MainActivity extends AppCompatActivity {
             statusTxt.setText("ARMED");
             statusTxt.setTextColor(Color.parseColor("#4CAF50"));
         }
+    }
 
+    public void particleLogin(){
         new AsyncTask<Void, Void, String>() {
             protected String doInBackground(Void... params) {
                 //  LOG IN TO PARTICLE
@@ -74,9 +132,10 @@ public class MainActivity extends AppCompatActivity {
                 Toaster.s(MainActivity.this, msg);
             }
         }.execute();
+    }
 
-   
-
+    public void armClick(){
+        Button armBTN = (Button)findViewById(R.id.armBTN);
         armBTN.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -99,20 +158,20 @@ public class MainActivity extends AppCompatActivity {
                     }
                 }.execute();
 
-                armBTN.setVisibility(View.INVISIBLE);
-                disarmBTN.setVisibility(View.VISIBLE);
-                statusTxt.setText("ARMED");
-                statusTxt.setTextColor(Color.parseColor("#4CAF50"));
+                alarmStatus = true;
+                alarmStatus(true);
 
             }
         });
+    }
+
+    public void disarmClick(){
+        Button disarmBTN = (Button)findViewById(R.id.disarmBTN);
         disarmBTN.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                armBTN.setVisibility(View.VISIBLE);
-                disarmBTN.setVisibility(View.INVISIBLE);
-                statusTxt.setText("DISARMED");
-                statusTxt.setTextColor(Color.parseColor("#F44336"));
+                alarmStatus = false;
+                alarmStatus(false);
             }
         });
     }
