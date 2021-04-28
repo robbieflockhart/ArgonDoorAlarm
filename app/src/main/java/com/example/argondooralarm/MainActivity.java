@@ -25,7 +25,7 @@ import io.particle.android.sdk.utils.Toaster;
 
 public class MainActivity extends AppCompatActivity {
 
-    boolean alarmStatus = true;
+    boolean alarmStatus = false;
     private static final String TAG = MainActivity.class.getName();
 
 
@@ -39,61 +39,59 @@ public class MainActivity extends AppCompatActivity {
         Button armBTN = (Button)findViewById(R.id.armBTN);
         Button disarmBTN = (Button)findViewById(R.id.disarmBTN);
         TextView statusTxt = (TextView)findViewById(R.id.statusTxt);
-
-        alarmStatus(alarmStatus);
+        //uIRefresh(alarmStatus);
 
         particleLogin();
-
-
-        /*new AsyncTask<Void, Void, String>() {
-            protected String doInBackground(Void... params) {
-                try {
-                    // Subscribe to an event
-                    long subscriptionId = ParticleCloudSDK.getCloud().subscribeToAllEvents(
-                            null,  // Subscribe to events containing "example"
-                            new ParticleEventHandler() {
-                                // Trigger this function when the event is received
-                                public void onEvent(String eventName, ParticleEvent event) {
-                                    Toaster.s(MainActivity.this,
-                                            "Example event happened!");
-                                    /*if (eventName.equals("Arm_Alarm")){
-                                        alarmStatus = true;
-                                        alarmStatus(true);
-                                    }
-                                    //if (eventName.equals("Disarm_Alarm")){
-                                        alarmStatus = false;
-                                        alarmStatus(false);
-                                        System.out.println("Event xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
-                                   // }
-                                }
-
-                                public void onEventError(Exception e) {
-                                    Log.e(TAG, "Event error: ", e);
-                                }
-                            });
-                    return "Subscribed!";
-                }
-                catch(IOException e) {
-                    // We end up here if there was an error subscribing
-                    Log.e(TAG, e.toString());
-                    return "Error subscribing!";
-                }
-            }
-
-            // This code is run after the doInBackground code finishes
-            protected void onPostExecute(String msg) {
-                Toaster.s(MainActivity.this, msg);
-            }
-        }.execute();*/
-
+        setAlarmStatus();
+        particleSubscribe();
         armClick();
         disarmClick();
     }
 
-    public void alarmStatus(boolean alarmStatus){
+    public void setAlarmStatus(){
+        new AsyncTask<Void, Void, String>() {
+            protected String doInBackground(Void... params) {
+                try {
+                    ParticleDevice myDevice = ParticleCloudSDK.getCloud().getDevice("e00fce684e8083453f49b051");
+                    int armed = myDevice.getIntVariable("armedInt");
+                    if(armed == 0){
+                        runOnUiThread(new Runnable(){
+                            @Override
+                            public void run(){
+                                alarmStatus = false;
+                                uIRefresh(false);
+                            }
+                        });
+                    }
+                    else if(armed == 1){
+                        runOnUiThread(new Runnable(){
+                            @Override
+                            public void run(){
+                                alarmStatus = true;
+                                uIRefresh(true);
+                            }
+                        });
+                    }
+                    return "Alarm Status Updated";
+                }
+                catch(ParticleCloudException | IOException | ParticleDevice.VariableDoesNotExistException e) {
+                    Log.e(TAG, "Error Receiving Status: " + e.toString());
+                    return "Error Receiving Status";
+                }
+            }
+
+            protected void onPostExecute(String msg) {
+                // Show Toast containing message from doInBackground
+                Toaster.s(MainActivity.this, msg);
+            }
+        }.execute();
+    }
+    public void uIRefresh(boolean alarmStatus){
         Button armBTN = (Button)findViewById(R.id.armBTN);
         Button disarmBTN = (Button)findViewById(R.id.disarmBTN);
         TextView statusTxt = (TextView)findViewById(R.id.statusTxt);
+
+        statusTxt.setVisibility(View.VISIBLE);
 
         if (alarmStatus == false)
         {
@@ -159,7 +157,7 @@ public class MainActivity extends AppCompatActivity {
                 }.execute();
 
                 alarmStatus = true;
-                alarmStatus(true);
+                uIRefresh(true);
 
             }
         });
@@ -171,9 +169,55 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 alarmStatus = false;
-                alarmStatus(false);
+                uIRefresh(false);
             }
         });
+    }
+
+    public void particleSubscribe(){
+        new AsyncTask<Void, Void, String>() {
+            protected String doInBackground(Void... params) {
+                try {
+                    // Subscribe to an event
+                    long subscriptionId = ParticleCloudSDK.getCloud().subscribeToDeviceEvents(
+                            null, "e00fce684e8083453f49b051",
+                            new ParticleEventHandler() {
+                                // Trigger this function when the event is received
+                                public void onEvent(String eventName, ParticleEvent event) {
+                                    Toaster.s(MainActivity.this,
+                                            "Example event happened!");
+                                    Log.i("some tag", "Received event with payload: " + event.dataPayload);
+
+                                    if (eventName.equals("Disarm_Alarm")){
+                                        System.out.println("-------------EVENT RECEIVED-------------");
+                                        runOnUiThread(new Runnable(){
+                                            @Override
+                                            public void run(){
+                                                alarmStatus = false;
+                                                uIRefresh(false);
+                                            }
+                                        });
+                                    }
+                                }
+
+                                public void onEventError(Exception e) {
+                                    Log.e(TAG, "Event error: ", e);
+                                }
+                            });
+                    return "Subscribed!";
+                }
+                catch(IOException e) {
+                    // We end up here if there was an error subscribing
+                    Log.e(TAG, e.toString());
+                    return "Error subscribing!";
+                }
+            }
+
+            // This code is run after the doInBackground code finishes
+            protected void onPostExecute(String msg) {
+                Toaster.s(MainActivity.this, msg);
+            }
+        }.execute();
     }
 
 }
