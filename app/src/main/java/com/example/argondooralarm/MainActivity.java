@@ -1,9 +1,14 @@
 package com.example.argondooralarm;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.graphics.Color;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -33,19 +38,18 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        createNotificationChannel();
 
         ParticleCloudSDK.init(this);
 
-        Button armBTN = (Button)findViewById(R.id.armBTN);
-        Button disarmBTN = (Button)findViewById(R.id.disarmBTN);
-        TextView statusTxt = (TextView)findViewById(R.id.statusTxt);
+        //Button armBTN = (Button)findViewById(R.id.armBTN);
+        //TextView statusTxt = (TextView)findViewById(R.id.statusTxt);
         //uIRefresh(alarmStatus);
 
         particleLogin();
         setAlarmStatus();
         particleSubscribe();
         armClick();
-        disarmClick();
     }
 
     public void setAlarmStatus(){
@@ -72,6 +76,20 @@ public class MainActivity extends AppCompatActivity {
                             }
                         });
                     }
+
+                    int notify = myDevice.getIntVariable("notify");
+
+                     if(notify > 0){
+                        runOnUiThread(new Runnable(){
+                            @Override
+                            public void run(){
+                                alarmStatus = true;
+                                TextView statusTxt = (TextView)findViewById(R.id.statusTxt);
+                                statusTxt.setText("ALARM TRIPPED");
+                                statusTxt.setTextColor(Color.parseColor("#F44336"));;
+                            }
+                        });
+                    }
                     return "Alarm Status Updated";
                 }
                 catch(ParticleCloudException | IOException | ParticleDevice.VariableDoesNotExistException e) {
@@ -88,7 +106,6 @@ public class MainActivity extends AppCompatActivity {
     }
     public void uIRefresh(boolean alarmStatus){
         Button armBTN = (Button)findViewById(R.id.armBTN);
-        Button disarmBTN = (Button)findViewById(R.id.disarmBTN);
         TextView statusTxt = (TextView)findViewById(R.id.statusTxt);
 
         statusTxt.setVisibility(View.VISIBLE);
@@ -96,14 +113,12 @@ public class MainActivity extends AppCompatActivity {
         if (alarmStatus == false)
         {
             armBTN.setVisibility(View.VISIBLE);
-            disarmBTN.setVisibility(View.INVISIBLE);
             statusTxt.setText("DISARMED");
-            statusTxt.setTextColor(Color.parseColor("#F44336"));
+            statusTxt.setTextColor(Color.parseColor("#FFFF9800"));
         }
         else if (alarmStatus == true)
         {
             armBTN.setVisibility(View.INVISIBLE);
-            disarmBTN.setVisibility(View.VISIBLE);
             statusTxt.setText("ARMED");
             statusTxt.setTextColor(Color.parseColor("#4CAF50"));
         }
@@ -163,17 +178,6 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    public void disarmClick(){
-        Button disarmBTN = (Button)findViewById(R.id.disarmBTN);
-        disarmBTN.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                alarmStatus = false;
-                uIRefresh(false);
-            }
-        });
-    }
-
     public void particleSubscribe(){
         new AsyncTask<Void, Void, String>() {
             protected String doInBackground(Void... params) {
@@ -195,6 +199,27 @@ public class MainActivity extends AppCompatActivity {
                                             public void run(){
                                                 alarmStatus = false;
                                                 uIRefresh(false);
+                                            }
+                                        });
+                                    }
+                                    if (eventName.equals("Alarm_Tripped")){
+                                        System.out.println("-------------EVENT RECEIVED-------------");
+                                        runOnUiThread(new Runnable(){
+                                            @Override
+                                            public void run(){
+                                                TextView statusTxt = (TextView)findViewById(R.id.statusTxt);
+                                                statusTxt.setText("ALARM TRIPPED");
+                                                statusTxt.setTextColor(Color.parseColor("#F44336"));
+                                                notification1();
+                                            }
+                                        });
+                                    }
+                                    if (eventName.equals("No_Code")){
+                                        System.out.println("-------------EVENT RECEIVED-------------");
+                                        runOnUiThread(new Runnable(){
+                                            @Override
+                                            public void run(){
+                                                notification2();
                                             }
                                         });
                                     }
@@ -220,4 +245,45 @@ public class MainActivity extends AppCompatActivity {
         }.execute();
     }
 
+    public void notification1(){
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "Channel1")
+                .setSmallIcon(R.drawable.ic_baseline_announcement_24)
+                .setContentTitle("Argon Door Alarm")
+                .setContentText("Alarm has been tripped!")
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+
+        notificationManager.notify(100, builder.build());
+
+    }
+
+    public void notification2(){
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "Channel1")
+                .setSmallIcon(R.drawable.ic_baseline_announcement_24)
+                .setContentTitle("Argon Door Alarm")
+                .setContentText("No code entered!")
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+
+        notificationManager.notify(101, builder.build());
+
+    }
+
+    private void createNotificationChannel() {
+        // Create the NotificationChannel, but only on API 26+ because
+        // the NotificationChannel class is new and not in the support library
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = "Channel1";
+            String description = "Particle Cloud subscribed events";
+            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            NotificationChannel channel = new NotificationChannel("Channel1", name, importance);
+            channel.setDescription(description);
+            // Register the channel with the system; you can't change the importance
+            // or other notification behaviors after this
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
+        }
+    }
 }
