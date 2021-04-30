@@ -1,3 +1,7 @@
+/**
+ * MainActivity for Argon Door Alarm.
+ * @author Robbie Flockhart
+ */
 package com.example.argondooralarm;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -17,15 +21,13 @@ import android.widget.TextView;
 
 import java.io.IOException;
 
-import io.particle.android.sdk.cloud.ParticleCloud;
+
 import io.particle.android.sdk.cloud.ParticleCloudException;
 import io.particle.android.sdk.cloud.ParticleCloudSDK;
-//import io.particle.android.sdk.cloud.exceptions.ParticleCloudException;
 import io.particle.android.sdk.cloud.ParticleDevice;
 import io.particle.android.sdk.cloud.ParticleEvent;
 import io.particle.android.sdk.cloud.ParticleEventHandler;
 import io.particle.android.sdk.cloud.ParticleEventVisibility;
-import io.particle.android.sdk.utils.Async;
 import io.particle.android.sdk.utils.Toaster;
 
 public class MainActivity extends AppCompatActivity {
@@ -38,27 +40,25 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         createNotificationChannel();
 
         ParticleCloudSDK.init(this);
-
-        //Button armBTN = (Button)findViewById(R.id.armBTN);
-        //TextView statusTxt = (TextView)findViewById(R.id.statusTxt);
-        //uIRefresh(alarmStatus);
 
         particleLogin();
         setAlarmStatus();
         particleSubscribe();
         armClick();
     }
-
+    //sets alarm status and UI on app start-up depending on the status of the Particle Argon Door Alarm
     public void setAlarmStatus(){
         new AsyncTask<Void, Void, String>() {
             protected String doInBackground(Void... params) {
                 try {
                     ParticleDevice myDevice = ParticleCloudSDK.getCloud().getDevice("e00fce684e8083453f49b051");
-                    int armed = myDevice.getIntVariable("armedInt");
+                    int armed = myDevice.getIntVariable("armedInt"); //gets real-time variable from Particle Argon
                     if(armed == 0){
+                        //main thread
                         runOnUiThread(new Runnable(){
                             @Override
                             public void run(){
@@ -68,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
                         });
                     }
                     else if(armed == 1){
+                        //main thread
                         runOnUiThread(new Runnable(){
                             @Override
                             public void run(){
@@ -77,9 +78,10 @@ public class MainActivity extends AppCompatActivity {
                         });
                     }
 
-                    int notify = myDevice.getIntVariable("notify");
+                    int notify = myDevice.getIntVariable("notify"); //gets real-time variable from Particle Argon
 
                      if(notify > 0){
+                         //main thread
                         runOnUiThread(new Runnable(){
                             @Override
                             public void run(){
@@ -99,11 +101,11 @@ public class MainActivity extends AppCompatActivity {
             }
 
             protected void onPostExecute(String msg) {
-                // Show Toast containing message from doInBackground
                 Toaster.s(MainActivity.this, msg);
             }
         }.execute();
     }
+    //changes the UI depending on the status of the alarm
     public void uIRefresh(boolean alarmStatus){
         Button armBTN = (Button)findViewById(R.id.armBTN);
         TextView statusTxt = (TextView)findViewById(R.id.statusTxt);
@@ -123,15 +125,13 @@ public class MainActivity extends AppCompatActivity {
             statusTxt.setTextColor(Color.parseColor("#4CAF50"));
         }
     }
-
+    //logs into the Particle Cloud
     public void particleLogin(){
         new AsyncTask<Void, Void, String>() {
             protected String doInBackground(Void... params) {
-                //  LOG IN TO PARTICLE
                 try {
                     // Log in to Particle Cloud using username and password
                     ParticleCloudSDK.getCloud().logIn("robb20@hotmail.co.uk", "sykcuk-megfy0-hErqys");
-                    ParticleDevice myDevice = ParticleCloudSDK.getCloud().getDevice("e00fce684e8083453f49b051");
                     return "Logged in!";
                 }
                 catch(ParticleCloudException e) {
@@ -141,12 +141,11 @@ public class MainActivity extends AppCompatActivity {
             }
 
             protected void onPostExecute(String msg) {
-                // Show Toast containing message from doInBackground
                 Toaster.s(MainActivity.this, msg);
             }
         }.execute();
     }
-
+    //on click listener for the 'Arm' button - publishes event to Particle Cloud, changes alarm status and updates the UI
     public void armClick(){
         Button armBTN = (Button)findViewById(R.id.armBTN);
         armBTN.setOnClickListener(new View.OnClickListener() {
@@ -166,7 +165,6 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     protected void onPostExecute(String msg) {
-                        // Show Toast containing message from doInBackground
                         Toaster.s(MainActivity.this, msg);
                     }
                 }.execute();
@@ -177,7 +175,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-
+    //subscribes to any events that are published to the Particle Cloud from the device with ID 'e00fce684e8083453f49b051'
     public void particleSubscribe(){
         new AsyncTask<Void, Void, String>() {
             protected String doInBackground(Void... params) {
@@ -191,9 +189,10 @@ public class MainActivity extends AppCompatActivity {
                                     Toaster.s(MainActivity.this,
                                             "Example event happened!");
                                     Log.i("some tag", "Received event with payload: " + event.dataPayload);
-
+                                    //if event published with name 'Disarm_Alarm' change alarm status and update UI
                                     if (eventName.equals("Disarm_Alarm")){
                                         System.out.println("-------------EVENT RECEIVED-------------");
+                                        //main thread
                                         runOnUiThread(new Runnable(){
                                             @Override
                                             public void run(){
@@ -202,8 +201,10 @@ public class MainActivity extends AppCompatActivity {
                                             }
                                         });
                                     }
+                                    //if event published with name 'Alarm_Tripped' update UI and call the first notification
                                     if (eventName.equals("Alarm_Tripped")){
                                         System.out.println("-------------EVENT RECEIVED-------------");
+                                        //main thread
                                         runOnUiThread(new Runnable(){
                                             @Override
                                             public void run(){
@@ -214,8 +215,10 @@ public class MainActivity extends AppCompatActivity {
                                             }
                                         });
                                     }
+                                    //if event published with name 'No_Code' call the second notification
                                     if (eventName.equals("No_Code")){
                                         System.out.println("-------------EVENT RECEIVED-------------");
+                                        //main thread
                                         runOnUiThread(new Runnable(){
                                             @Override
                                             public void run(){
@@ -232,19 +235,17 @@ public class MainActivity extends AppCompatActivity {
                     return "Subscribed!";
                 }
                 catch(IOException e) {
-                    // We end up here if there was an error subscribing
                     Log.e(TAG, e.toString());
                     return "Error subscribing!";
                 }
             }
 
-            // This code is run after the doInBackground code finishes
             protected void onPostExecute(String msg) {
                 Toaster.s(MainActivity.this, msg);
             }
         }.execute();
     }
-
+    //creates notification for when alarm is tripped
     public void notification1(){
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "Channel1")
                 .setSmallIcon(R.drawable.ic_baseline_announcement_24)
@@ -257,7 +258,7 @@ public class MainActivity extends AppCompatActivity {
         notificationManager.notify(100, builder.build());
 
     }
-
+    //create notification for when no passcode is entered
     public void notification2(){
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "Channel1")
                 .setSmallIcon(R.drawable.ic_baseline_announcement_24)
@@ -270,18 +271,15 @@ public class MainActivity extends AppCompatActivity {
         notificationManager.notify(101, builder.build());
 
     }
-
+    //creates a notification channel with ID: 'Channel1'
     private void createNotificationChannel() {
-        // Create the NotificationChannel, but only on API 26+ because
-        // the NotificationChannel class is new and not in the support library
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             CharSequence name = "Channel1";
             String description = "Particle Cloud subscribed events";
             int importance = NotificationManager.IMPORTANCE_DEFAULT;
             NotificationChannel channel = new NotificationChannel("Channel1", name, importance);
             channel.setDescription(description);
-            // Register the channel with the system; you can't change the importance
-            // or other notification behaviors after this
+
             NotificationManager notificationManager = getSystemService(NotificationManager.class);
             notificationManager.createNotificationChannel(channel);
         }
